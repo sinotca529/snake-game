@@ -73,6 +73,10 @@ impl SnakeGameLogic {
         }
     }
 
+    fn get_dir(&self) -> &Direction {
+        &self.dir
+    }
+
     fn is_inner_field(&self, c: &Coord) -> bool {
         let Size(w, h) = self.field_size;
         (1..w - 1).contains(&c.0) && (1..h - 1).contains(&c.1)
@@ -82,19 +86,19 @@ impl SnakeGameLogic {
         self.body.len() - 3
     }
 
-    fn set_dir(&mut self, dir: Direction) {
+    /// Move head toward the direction.
+    /// Return false if game is over.
+    fn r#move(&mut self, dir: Direction) -> bool {
+        let head = self.body.front().unwrap();
+
+        // Update direction
         if self.dir.opposite() != dir {
             self.dir = dir;
         }
-    }
 
-    /// Move head toward the direction.
-    /// Return false if game is over.
-    fn r#move(&mut self) -> bool {
-        let head = self.body.front().unwrap();
         let adj = head.adjascent(&self.dir);
 
-        // Collide with wall.
+        // Update the direction except when the direction is not opposite from the current direction.
         if !self.is_inner_field(&adj) {
             return false;
         }
@@ -246,14 +250,15 @@ impl SnakeGameControler {
             }
         });
 
+        let mut dir = *self.logic.get_dir();
         while let Ok(e) = self.event_rx.recv() {
             use SnakeGameEvent::*;
             match e {
                 ChangeDir(d) => {
-                    self.logic.set_dir(d);
+                    dir = d;
                 }
                 Render => {
-                    if !self.logic.r#move() {
+                    if !self.logic.r#move(dir) {
                         break;
                     }
                     self.render(&mut stdout);
